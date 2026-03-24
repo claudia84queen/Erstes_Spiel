@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Asteroids Arcade</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <h1>Asteroids Arcade</h1>
+      <p class="subtitle">Retro-Arcade in Vanilla JS</p>
+
+      <div class="canvas-wrapper">
+        <canvas id="gameCanvas" width="900" height="600" aria-label="Asteroids Spielfeld"></canvas>
+      </div>
+
+      <section class="controls" aria-label="Steuerung">
+        <h2>Steuerung</h2>
+        <ul>
+          <li><kbd>←</kbd> / <kbd>→</kbd> Rotieren</li>
+          <li><kbd>↑</kbd> Schub</li>
+          <li><kbd>Leertaste</kbd> Schießen</li>
+          <li><kbd>P</kbd> Pause / Fortsetzen</li>
+          <li><kbd>R</kbd> Neustart nach Game Over</li>
+        </ul>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
