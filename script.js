@@ -8,6 +8,22 @@
   const GAME = {
     width: 900,
     height: 600,
+  const canvas = document.getElementById("gameCanvas");
+  if (!canvas) {
+    console.error("Asteroids konnte nicht starten: #gameCanvas nicht gefunden.");
+    return;
+  }
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    console.error("Asteroids konnte nicht starten: 2D-Kontext nicht verfügbar.");
+    return;
+  }
+  const ctx = canvas.getContext("2d");
+
+  const GAME = {
+    width: canvas.width,
+    height: canvas.height,
     shipRadius: 14,
     score: 0,
     lives: 3,
@@ -168,6 +184,7 @@
 
   function update(delta) {
     if (GAME.isGameOver || GAME.isPaused) {
+    if (GAME.isGameOver) {
       return;
     }
 
@@ -551,4 +568,13 @@
     document.addEventListener("DOMContentLoaded", startGame, { once: true });
   }
   startGame();
+    window.addEventListener("DOMContentLoaded", startGame, { once: true });
+  } else {
+    startGame();
+  }
+  resetGame();
+  requestAnimationFrame((time) => {
+    lastFrame = time;
+    gameLoop(time);
+  });
 })();
