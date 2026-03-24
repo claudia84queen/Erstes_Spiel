@@ -1,6 +1,13 @@
 (() => {
   "use strict";
 
+  const canvas = document.getElementById("gameCanvas");
+  const ctx = canvas?.getContext("2d");
+
+  if (!canvas || !ctx) {
+    console.error("Spiel konnte nicht initialisiert werden: Canvas/Context fehlt.");
+    return;
+  }
   // ===== Canvas & HUD setup =====
   let canvas = null;
   let ctx = null;
@@ -28,6 +35,11 @@
     score: 0,
     lives: 3,
     isGameOver: false,
+    time: 0,
+  };
+
+  const SETTINGS = {
+    turnSpeed: 3.8,
     isPaused: false,
     message: "",
     time: 0,
@@ -62,6 +74,7 @@
   let asteroids = [];
   let particles = [];
   let lastFrame = performance.now();
+
   let hasStarted = false;
 
   // ===== Initialization =====
@@ -183,6 +196,7 @@
   }
 
   function update(delta) {
+    if (GAME.isGameOver) return;
     if (GAME.isGameOver || GAME.isPaused) {
     if (GAME.isGameOver) {
       return;
@@ -226,6 +240,7 @@
 
     ship.thrustFlash = Math.max(0, ship.thrustFlash - delta);
 
+    if (keys.Space && GAME.time >= ship.canShootAt) {
     const canShoot = GAME.time >= ship.canShootAt;
     if (keys.Space && canShoot) {
       fireBullet();
@@ -254,6 +269,7 @@
       bullet.y += bullet.vy * delta;
       bullet.life -= delta;
       wrap(bullet);
+      if (bullet.life <= 0) bullets.splice(i, 1);
 
       if (bullet.life <= 0) {
         bullets.splice(i, 1);
@@ -282,6 +298,9 @@
     }
   }
 
+  function handleCollisions() {
+    for (let b = bullets.length - 1; b >= 0; b -= 1) {
+      const bullet = bullets[b];
   // ===== Collision detection =====
   function handleCollisions() {
     // Bullet vs asteroid
@@ -294,6 +313,12 @@
         if (distance(bullet.x, bullet.y, asteroid.x, asteroid.y) <= asteroid.radius) {
           bullets.splice(b, 1);
           splitAsteroid(a);
+          break;
+        }
+      }
+    }
+
+    if (GAME.time < ship.invulnerableUntil) return;
           bulletHit = true;
           break;
         }
@@ -318,6 +343,7 @@
 
   function splitAsteroid(index) {
     const asteroid = asteroids[index];
+
     asteroid.hitFlash = 0.12;
 
     // Score abhängig von Größe
@@ -342,6 +368,9 @@
 
     if (GAME.lives <= 0) {
       GAME.isGameOver = true;
+      return;
+    }
+
       GAME.message = "GAME OVER - Drücke R zum Neustart";
       return;
     }
@@ -375,6 +404,11 @@
     drawParticles();
     drawHUD();
 
+    if (GAME.isGameOver) drawOverlay();
+  }
+
+  function drawBackgroundStars() {
+    for (let i = 0; i < 60; i += 1) {
     if (GAME.isGameOver) {
       drawOverlay();
     } else if (GAME.isPaused) {
@@ -440,6 +474,8 @@
       ctx.save();
       ctx.translate(asteroid.x, asteroid.y);
       ctx.rotate(asteroid.rotation);
+      ctx.strokeStyle = "#d9e6ff";
+      ctx.lineWidth = asteroid.size === 3 ? 3 : 2;
 
       const flash = asteroid.hitFlash > 0 ? "#ff6b80" : "#d9e6ff";
       ctx.strokeStyle = flash;
@@ -473,6 +509,9 @@
     ctx.font = "20px monospace";
     ctx.fillText(`Score: ${GAME.score}`, 16, 30);
     ctx.fillText(`Leben: ${GAME.lives}`, 16, 58);
+    ctx.fillStyle = "#9db5ff";
+    ctx.font = "14px monospace";
+    ctx.fillText("Zerstöre Asteroiden und überlebe.", 16, 84);
 
     if (!GAME.isGameOver) {
       ctx.fillStyle = "#9db5ff";
