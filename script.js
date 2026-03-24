@@ -3,6 +3,16 @@
 
   // ===== Canvas & HUD setup =====
   const canvas = document.getElementById("gameCanvas");
+  if (!canvas) {
+    console.error("Asteroids konnte nicht starten: #gameCanvas nicht gefunden.");
+    return;
+  }
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    console.error("Asteroids konnte nicht starten: 2D-Kontext nicht verfügbar.");
+    return;
+  }
   const ctx = canvas.getContext("2d");
 
   const GAME = {
@@ -521,6 +531,19 @@
   }
 
   // Start game
+  function startGame() {
+    resetGame();
+    requestAnimationFrame((time) => {
+      lastFrame = time;
+      gameLoop(time);
+    });
+  }
+
+  if (document.readyState === "loading") {
+    window.addEventListener("DOMContentLoaded", startGame, { once: true });
+  } else {
+    startGame();
+  }
   resetGame();
   requestAnimationFrame((time) => {
     lastFrame = time;
