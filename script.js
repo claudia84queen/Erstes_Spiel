@@ -2,6 +2,12 @@
   "use strict";
 
   // ===== Canvas & HUD setup =====
+  let canvas = null;
+  let ctx = null;
+
+  const GAME = {
+    width: 900,
+    height: 600,
   const canvas = document.getElementById("gameCanvas");
   if (!canvas) {
     console.error("Asteroids konnte nicht starten: #gameCanvas nicht gefunden.");
@@ -56,6 +62,7 @@
   let asteroids = [];
   let particles = [];
   let lastFrame = performance.now();
+  let hasStarted = false;
 
   // ===== Initialization =====
   function createShip() {
@@ -532,6 +539,24 @@
 
   // Start game
   function startGame() {
+    if (hasStarted) return;
+
+    canvas = document.getElementById("gameCanvas");
+    if (!canvas) {
+      console.error("Asteroids konnte nicht starten: #gameCanvas nicht gefunden.");
+      return;
+    }
+
+    ctx = canvas.getContext("2d");
+    if (!ctx) {
+      console.error("Asteroids konnte nicht starten: 2D-Kontext nicht verfügbar.");
+      return;
+    }
+
+    GAME.width = canvas.width;
+    GAME.height = canvas.height;
+    hasStarted = true;
+
     resetGame();
     requestAnimationFrame((time) => {
       lastFrame = time;
@@ -540,6 +565,9 @@
   }
 
   if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", startGame, { once: true });
+  }
+  startGame();
     window.addEventListener("DOMContentLoaded", startGame, { once: true });
   } else {
     startGame();
