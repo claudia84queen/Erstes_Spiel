@@ -43,6 +43,7 @@ Dann im Browser öffnen: `http://localhost:8080`
 - **Pfeil links/rechts**: Rotation
 - **Pfeil hoch**: Schub
 - **Leertaste**: Schießen
+- **P**: Pause / Fortsetzen
 - **R**: Neustart nach Game Over
 
 ## Projektstruktur

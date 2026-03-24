@@ -12,6 +12,7 @@
     score: 0,
     lives: 3,
     isGameOver: false,
+    isPaused: false,
     message: "",
     time: 0,
   };
@@ -64,6 +65,7 @@
     GAME.score = 0;
     GAME.lives = 3;
     GAME.isGameOver = false;
+    GAME.isPaused = false;
     GAME.message = "";
     GAME.time = 0;
 
@@ -137,6 +139,11 @@
     if (event.code === "KeyR" && GAME.isGameOver) {
       resetGame();
     }
+
+    if (event.code === "KeyP" && !GAME.isGameOver) {
+      GAME.isPaused = !GAME.isPaused;
+      event.preventDefault();
+    }
   });
 
   window.addEventListener("keyup", (event) => {
@@ -159,6 +166,7 @@
   }
 
   function update(delta) {
+    if (GAME.isGameOver || GAME.isPaused) {
     if (GAME.isGameOver) {
       return;
     }
@@ -352,6 +360,8 @@
 
     if (GAME.isGameOver) {
       drawOverlay();
+    } else if (GAME.isPaused) {
+      drawPauseOverlay();
     }
   }
 
@@ -451,6 +461,14 @@
       ctx.fillStyle = "#9db5ff";
       ctx.font = "14px monospace";
       ctx.fillText("Zerstöre Asteroiden und überlebe.", 16, 84);
+
+      if (GAME.isPaused) {
+        ctx.fillStyle = "#ffde8a";
+        ctx.fillText("Status: Pausiert (P zum Fortsetzen)", 16, 108);
+      } else {
+        ctx.fillStyle = "#9db5ff";
+        ctx.fillText("Status: Aktiv (P zum Pausieren)", 16, 108);
+      }
     }
     ctx.restore();
   }
@@ -469,6 +487,20 @@
     ctx.fillText(`Endscore: ${GAME.score}`, GAME.width / 2, GAME.height / 2 + 22);
     ctx.font = "18px monospace";
     ctx.fillText("Drücke R für Neustart", GAME.width / 2, GAME.height / 2 + 58);
+    ctx.restore();
+  }
+
+  function drawPauseOverlay() {
+    ctx.save();
+    ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+    ctx.fillRect(0, 0, GAME.width, GAME.height);
+    ctx.fillStyle = "#ffde8a";
+    ctx.textAlign = "center";
+    ctx.font = "bold 46px monospace";
+    ctx.fillText("PAUSE", GAME.width / 2, GAME.height / 2 - 10);
+    ctx.fillStyle = "#d9e6ff";
+    ctx.font = "18px monospace";
+    ctx.fillText("Drücke P zum Fortsetzen", GAME.width / 2, GAME.height / 2 + 30);
     ctx.restore();
   }
 
