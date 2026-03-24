@@ -8,6 +8,25 @@
     console.error("Spiel konnte nicht initialisiert werden: Canvas/Context fehlt.");
     return;
   }
+  // ===== Canvas & HUD setup =====
+  let canvas = null;
+  let ctx = null;
+
+  const GAME = {
+    width: 900,
+    height: 600,
+  const canvas = document.getElementById("gameCanvas");
+  if (!canvas) {
+    console.error("Asteroids konnte nicht starten: #gameCanvas nicht gefunden.");
+    return;
+  }
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    console.error("Asteroids konnte nicht starten: 2D-Kontext nicht verfügbar.");
+    return;
+  }
+  const ctx = canvas.getContext("2d");
 
   const GAME = {
     width: canvas.width,
@@ -21,6 +40,14 @@
 
   const SETTINGS = {
     turnSpeed: 3.8,
+    isPaused: false,
+    message: "",
+    time: 0,
+  };
+
+  // ===== Core tuning values =====
+  const SETTINGS = {
+    turnSpeed: 3.8, // radians/sec
     thrust: 240,
     drag: 0.992,
     maxShipSpeed: 340,
@@ -48,6 +75,9 @@
   let particles = [];
   let lastFrame = performance.now();
 
+  let hasStarted = false;
+
+  // ===== Initialization =====
   function createShip() {
     return {
       x: GAME.width / 2,
@@ -65,6 +95,8 @@
     GAME.score = 0;
     GAME.lives = 3;
     GAME.isGameOver = false;
+    GAME.isPaused = false;
+    GAME.message = "";
     GAME.time = 0;
 
     ship = createShip();
@@ -88,6 +120,7 @@
     let spawnX = x;
     let spawnY = y;
 
+    // Große Asteroiden starten nicht direkt auf dem Schiff
     if (spawnX === undefined || spawnY === undefined) {
       do {
         spawnX = Math.random() * GAME.width;
@@ -126,6 +159,7 @@
     return points;
   }
 
+  // ===== Input handling =====
   window.addEventListener("keydown", (event) => {
     if (event.code in keys) {
       keys[event.code] = true;
@@ -134,6 +168,11 @@
 
     if (event.code === "KeyR" && GAME.isGameOver) {
       resetGame();
+    }
+
+    if (event.code === "KeyP" && !GAME.isGameOver) {
+      GAME.isPaused = !GAME.isPaused;
+      event.preventDefault();
     }
   });
 
@@ -144,6 +183,7 @@
     }
   });
 
+  // ===== Main loop =====
   function gameLoop(now) {
     const delta = Math.min((now - lastFrame) / 1000, 0.033);
     lastFrame = now;
@@ -157,6 +197,10 @@
 
   function update(delta) {
     if (GAME.isGameOver) return;
+    if (GAME.isGameOver || GAME.isPaused) {
+    if (GAME.isGameOver) {
+      return;
+    }
 
     updateShip(delta);
     updateBullets(delta);
@@ -164,6 +208,7 @@
     updateParticles(delta);
     handleCollisions();
 
+    // Nächste Welle, wenn alles zerstört ist
     if (asteroids.length === 0) {
       spawnAsteroids(SETTINGS.initialAsteroids + Math.floor(GAME.score / 1000));
     }
@@ -196,6 +241,8 @@
     ship.thrustFlash = Math.max(0, ship.thrustFlash - delta);
 
     if (keys.Space && GAME.time >= ship.canShootAt) {
+    const canShoot = GAME.time >= ship.canShootAt;
+    if (keys.Space && canShoot) {
       fireBullet();
       ship.canShootAt = GAME.time + SETTINGS.shootCooldown;
     }
@@ -214,6 +261,7 @@
     });
   }
 
+  // ===== Entity management =====
   function updateBullets(delta) {
     for (let i = bullets.length - 1; i >= 0; i -= 1) {
       const bullet = bullets[i];
@@ -222,6 +270,10 @@
       bullet.life -= delta;
       wrap(bullet);
       if (bullet.life <= 0) bullets.splice(i, 1);
+
+      if (bullet.life <= 0) {
+        bullets.splice(i, 1);
+      }
     }
   }
 
@@ -249,6 +301,13 @@
   function handleCollisions() {
     for (let b = bullets.length - 1; b >= 0; b -= 1) {
       const bullet = bullets[b];
+  // ===== Collision detection =====
+  function handleCollisions() {
+    // Bullet vs asteroid
+    for (let b = bullets.length - 1; b >= 0; b -= 1) {
+      const bullet = bullets[b];
+      let bulletHit = false;
+
       for (let a = asteroids.length - 1; a >= 0; a -= 1) {
         const asteroid = asteroids[a];
         if (distance(bullet.x, bullet.y, asteroid.x, asteroid.y) <= asteroid.radius) {
@@ -260,6 +319,18 @@
     }
 
     if (GAME.time < ship.invulnerableUntil) return;
+          bulletHit = true;
+          break;
+        }
+      }
+
+      if (bulletHit) continue;
+    }
+
+    // Ship vs asteroid
+    if (GAME.time < ship.invulnerableUntil) {
+      return;
+    }
 
     for (let a = 0; a < asteroids.length; a += 1) {
       const asteroid = asteroids[a];
@@ -273,12 +344,16 @@
   function splitAsteroid(index) {
     const asteroid = asteroids[index];
 
+    asteroid.hitFlash = 0.12;
+
+    // Score abhängig von Größe
     if (asteroid.size === 3) GAME.score += 20;
     if (asteroid.size === 2) GAME.score += 50;
     if (asteroid.size === 1) GAME.score += 100;
 
     createExplosion(asteroid.x, asteroid.y, asteroid.size * 7);
 
+    // Zerbrechen in zwei kleinere Asteroiden
     if (asteroid.size > 1) {
       asteroids.push(createAsteroid(asteroid.size - 1, asteroid.x, asteroid.y));
       asteroids.push(createAsteroid(asteroid.size - 1, asteroid.x, asteroid.y));
@@ -296,6 +371,11 @@
       return;
     }
 
+      GAME.message = "GAME OVER - Drücke R zum Neustart";
+      return;
+    }
+
+    // Respawn in der Mitte + kurze Unverwundbarkeit
     ship = createShip();
     ship.invulnerableUntil = GAME.time + SETTINGS.invulnerableAfterHit;
   }
@@ -314,6 +394,7 @@
     }
   }
 
+  // ===== Rendering =====
   function render() {
     ctx.clearRect(0, 0, GAME.width, GAME.height);
     drawBackgroundStars();
@@ -328,6 +409,17 @@
 
   function drawBackgroundStars() {
     for (let i = 0; i < 60; i += 1) {
+    if (GAME.isGameOver) {
+      drawOverlay();
+    } else if (GAME.isPaused) {
+      drawPauseOverlay();
+    }
+  }
+
+  function drawBackgroundStars() {
+    // simple pseudo starfield, gebunden an Zeit
+    const stars = 60;
+    for (let i = 0; i < stars; i += 1) {
       const x = (i * 137.5) % GAME.width;
       const y = (i * 83.3 + Math.sin(GAME.time + i) * 4 + 1000) % GAME.height;
       const alpha = 0.2 + ((i * 17) % 10) / 40;
@@ -345,6 +437,7 @@
     ctx.save();
     ctx.translate(ship.x, ship.y);
     ctx.rotate(ship.angle);
+
     ctx.strokeStyle = "#d9e6ff";
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -355,6 +448,7 @@
     ctx.closePath();
     ctx.stroke();
 
+    // kurzes Mündungs-/Schubfeuer
     if (ship.thrustFlash > 0) {
       ctx.strokeStyle = "#79ffe1";
       ctx.beginPath();
@@ -382,6 +476,11 @@
       ctx.rotate(asteroid.rotation);
       ctx.strokeStyle = "#d9e6ff";
       ctx.lineWidth = asteroid.size === 3 ? 3 : 2;
+
+      const flash = asteroid.hitFlash > 0 ? "#ff6b80" : "#d9e6ff";
+      ctx.strokeStyle = flash;
+      ctx.lineWidth = asteroid.size === 3 ? 3 : 2;
+
       ctx.beginPath();
       const first = asteroid.vertices[0];
       ctx.moveTo(first.x, first.y);
@@ -391,6 +490,7 @@
       }
       ctx.closePath();
       ctx.stroke();
+
       ctx.restore();
     }
   }
@@ -412,6 +512,20 @@
     ctx.fillStyle = "#9db5ff";
     ctx.font = "14px monospace";
     ctx.fillText("Zerstöre Asteroiden und überlebe.", 16, 84);
+
+    if (!GAME.isGameOver) {
+      ctx.fillStyle = "#9db5ff";
+      ctx.font = "14px monospace";
+      ctx.fillText("Zerstöre Asteroiden und überlebe.", 16, 84);
+
+      if (GAME.isPaused) {
+        ctx.fillStyle = "#ffde8a";
+        ctx.fillText("Status: Pausiert (P zum Fortsetzen)", 16, 108);
+      } else {
+        ctx.fillStyle = "#9db5ff";
+        ctx.fillText("Status: Aktiv (P zum Pausieren)", 16, 108);
+      }
+    }
     ctx.restore();
   }
 
@@ -423,6 +537,7 @@
     ctx.textAlign = "center";
     ctx.font = "bold 48px monospace";
     ctx.fillText("GAME OVER", GAME.width / 2, GAME.height / 2 - 20);
+
     ctx.fillStyle = "#d9e6ff";
     ctx.font = "22px monospace";
     ctx.fillText(`Endscore: ${GAME.score}`, GAME.width / 2, GAME.height / 2 + 22);
@@ -431,6 +546,21 @@
     ctx.restore();
   }
 
+  function drawPauseOverlay() {
+    ctx.save();
+    ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+    ctx.fillRect(0, 0, GAME.width, GAME.height);
+    ctx.fillStyle = "#ffde8a";
+    ctx.textAlign = "center";
+    ctx.font = "bold 46px monospace";
+    ctx.fillText("PAUSE", GAME.width / 2, GAME.height / 2 - 10);
+    ctx.fillStyle = "#d9e6ff";
+    ctx.font = "18px monospace";
+    ctx.fillText("Drücke P zum Fortsetzen", GAME.width / 2, GAME.height / 2 + 30);
+    ctx.restore();
+  }
+
+  // ===== Helpers =====
   function wrap(entity) {
     if (entity.x < 0) entity.x += GAME.width;
     if (entity.x > GAME.width) entity.x -= GAME.width;
@@ -446,6 +576,41 @@
     return min + Math.random() * (max - min);
   }
 
+  // Start game
+  function startGame() {
+    if (hasStarted) return;
+
+    canvas = document.getElementById("gameCanvas");
+    if (!canvas) {
+      console.error("Asteroids konnte nicht starten: #gameCanvas nicht gefunden.");
+      return;
+    }
+
+    ctx = canvas.getContext("2d");
+    if (!ctx) {
+      console.error("Asteroids konnte nicht starten: 2D-Kontext nicht verfügbar.");
+      return;
+    }
+
+    GAME.width = canvas.width;
+    GAME.height = canvas.height;
+    hasStarted = true;
+
+    resetGame();
+    requestAnimationFrame((time) => {
+      lastFrame = time;
+      gameLoop(time);
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", startGame, { once: true });
+  }
+  startGame();
+    window.addEventListener("DOMContentLoaded", startGame, { once: true });
+  } else {
+    startGame();
+  }
   resetGame();
   requestAnimationFrame((time) => {
     lastFrame = time;
