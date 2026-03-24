@@ -167,6 +167,7 @@
 
   function update(delta) {
     if (GAME.isGameOver || GAME.isPaused) {
+    if (GAME.isGameOver) {
       return;
     }
 
